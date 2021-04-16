@@ -26,7 +26,7 @@
 #include "common/defs.h"
 
 #define MAX_MEM_BUFFER_SIZE 8192
-#define PORT_DEFAULT 16880
+#define PORT_DEFAULT 66789
 
 using namespace common;
 

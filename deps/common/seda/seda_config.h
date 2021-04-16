@@ -33,7 +33,7 @@ namespace common {
 
 #define COUNT "count"
 
-#define THREAD_POOL_ID "ThreadPoolId"
+#define THREAD_POOL_ID "ThreadId"
 
 #define NEXT_STAGES "NextStages"
 

@@ -230,8 +230,7 @@ int init(ProcessParam *processParam) {
   blockDefaultSignals(&newSigset, &oset);
   setSignalHandler(sigHandler);
   // wait interrupt signals
-  int signalNum = -1;
-  waitForSignals(&newSigset, signalNum);
+  startWaitForSignals(&newSigset);
 
   seedRandom();
 

@@ -32,7 +32,7 @@ std::string& getPidPath() {
 }
 
 void setPidPath(const char *progName) {
-  std::string path = getPidPath();
+  std::string &path = getPidPath();
 
   if (progName != NULL) {
     path = std::string(_PATH_TMP) + progName + ".pid";

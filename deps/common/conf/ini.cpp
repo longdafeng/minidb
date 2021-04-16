@@ -169,7 +169,7 @@ int Ini::load(const std::string &fileName) {
         continueLastLine = true;
 
         // remove the last character
-        lineEntry[lineEntry.size() - 1] = '\0';
+        lineEntry = lineEntry.substr(0, lineEntry.size() -1);
         continue;
       } else {
         continueLastLine = false;
@@ -199,7 +199,9 @@ void Ini::toString(std::string &outputStr) {
 
   for (SessionsMap::iterator it = mSections.begin(); it != mSections.end();
        it++) {
+    outputStr += CFG_SESSION_START_TAG;
     outputStr += it->first;
+    outputStr += CFG_SESSION_END_TAG;
     outputStr += "\n";
 
     std::map<std::string, std::string> &sectionMap = it->second;
@@ -212,6 +214,7 @@ void Ini::toString(std::string &outputStr) {
       outputStr += subIt->second;
       outputStr += "\n";
     }
+    outputStr += "\n";
   }
 
   outputStr += "Finish dump configuration \n";

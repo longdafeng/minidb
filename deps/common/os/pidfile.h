@@ -34,7 +34,7 @@ int writePidFile(const char *progName);
  */
 void removePidFile(void);
 
-int readPid(int &outputPid);
+std::string& getPidPath();
 
 } //namespace common
 #endif // __COMMON_OS_PIDFILE_H__
