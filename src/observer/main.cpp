@@ -44,6 +44,8 @@
 #include "sql/query_cache/query_cache_stage.h"
 #include "storage/default/default_storage_stage.h"
 #include "storage/mem/mem_storage_stage.h"
+#include "common/metrics/metrics_registry.h"
+#include "common/metrics/log_reporter.h"
 
 #include "ini_setting.h"
 #include "net/server.h"
@@ -224,6 +226,11 @@ int init(ProcessParam *processParam) {
     LOG_ERROR("Failed to init seda configuration!");
     return rc;
   }
+
+  LogReporter *logReporter = theGlobalLogReporter();
+  MetricsRegistry &metricsRegistry = theGlobalMetricsRegistry();
+
+  metricsRegistry.addReporter(logReporter);
 
   // Block interrupt signals before creating child threads.
   sigset_t newSigset, oset;

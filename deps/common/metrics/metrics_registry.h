@@ -35,7 +35,7 @@ public:
 
   void report();
 
-  void setReporter(Reporter *reporter) {
+  void addReporter(Reporter *reporter) {
     reporters.push_back(reporter);
   }
 
@@ -46,5 +46,7 @@ protected:
 
 
 };
+
+MetricsRegistry& theGlobalMetricsRegistry();
 }//namespace common
 #endif //__COMMON_METRICS_METRICS_REGISTRY_H__

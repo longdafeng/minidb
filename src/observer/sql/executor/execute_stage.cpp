@@ -20,7 +20,6 @@
 #include "common/io/io.h"
 #include "common/lang/string.h"
 #include "common/log/log.h"
-#include "common/seda/seda_stats_stage.h"
 #include "common/seda/timer_stage.h"
 #include "event/storage_event.h"
 

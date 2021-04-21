@@ -19,6 +19,11 @@
 
 namespace common {
 
+LogReporter* theGlobalLogReporter() {
+  static LogReporter* instance = new LogReporter();
+
+  return instance;
+}
 
  void LogReporter::report(const std::string &tag, Metric *metric) {
   Snapshot *snapshot = metric->getSnapshot();

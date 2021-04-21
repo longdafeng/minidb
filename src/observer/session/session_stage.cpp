@@ -17,17 +17,22 @@
 #include "session_stage.h"
 
 #include "common/conf/ini.h"
-#include "common/io/io.h"
-#include "common/lang/string.h"
 #include "common/log/log.h"
 #include "common/seda/timer_stage.h"
 
+#include "common/metrics/metrics_registry.h"
 #include "common/seda/callback.h"
 #include "event/session_event.h"
 #include "event/sql_event.h"
 
+const std::string SessionStage::READ_SOCKET_METRIC_TAG = "SessionStage.readsocket";
+const std::string SessionStage::WRITE_SOCKET_METRIC_TAG = "SessionStage.writesocket";
+const std::string SessionStage::SQL_METRIC_TAG = "SessionStage.sql";
+
 //! Constructor
-SessionStage::SessionStage(const char *tag) : Stage(tag), resolveStage(NULL) {}
+SessionStage::SessionStage(const char *tag)
+    : Stage(tag), resolveStage(NULL), readSocketMetric(NULL),
+      writeSocketMetric(NULL), sqlMetric(NULL) {}
 
 //! Destructor
 SessionStage::~SessionStage() {}
@@ -63,6 +68,15 @@ bool SessionStage::initialize() {
   std::list<Stage *>::iterator stgp = nextStageList.begin();
   resolveStage = *(stgp++);
 
+  MetricsRegistry metricsRegistry = theGlobalMetricsRegistry();
+  readSocketMetric = new SimpleTimer();
+  metricsRegistry.registerMetric(READ_SOCKET_METRIC_TAG, readSocketMetric);
+
+  writeSocketMetric = new SimpleTimer();
+  metricsRegistry.registerMetric(WRITE_SOCKET_METRIC_TAG, writeSocketMetric);
+
+  sqlMetric = new SimpleTimer();
+  metricsRegistry.registerMetric(SQL_METRIC_TAG, sqlMetric);
   LOG_TRACE("Exit");
   return true;
 }
@@ -70,6 +84,26 @@ bool SessionStage::initialize() {
 //! Cleanup after disconnection
 void SessionStage::cleanup() {
   LOG_TRACE("Enter");
+
+  MetricsRegistry &metricsRegistry = theGlobalMetricsRegistry();
+  if (readSocketMetric != NULL) {
+    metricsRegistry.unregister(READ_SOCKET_METRIC_TAG);
+    // it should wait some time
+    delete readSocketMetric;
+    readSocketMetric = NULL;
+  }
+
+  if (writeSocketMetric != NULL) {
+    metricsRegistry.unregister(WRITE_SOCKET_METRIC_TAG);
+    delete writeSocketMetric;
+    writeSocketMetric = NULL;
+  }
+
+  if (sqlMetric != NULL) {
+    metricsRegistry.unregister(SQL_METRIC_TAG);
+    delete sqlMetric;
+    sqlMetric = NULL;
+  }
 
   LOG_TRACE("Exit");
 }
@@ -86,6 +120,7 @@ void SessionStage::handleEvent(StageEvent *event) {
 
 void SessionStage::callbackEvent(StageEvent *event, CallbackContext *context) {
   LOG_TRACE("Enter\n");
+  TimerStat writeStat(*writeSocketMetric);
   SessionEvent *sev = dynamic_cast<SessionEvent *>(event);
   ConnectionContext *client = sev->getClient();
 
@@ -116,13 +151,15 @@ void SessionStage::closeConnection(ConnectionContext *clientContext) {
 }
 
 void SessionStage::readSocket(StageEvent *event) {
+  TimerStat readStat(*readSocketMetric);
+
   SessionEvent *sev = dynamic_cast<SessionEvent *>(event);
   ConnectionContext *client = sev->getClient();
   int len;
 
   //会把参数fd 所指的文件传送count个字节到buf指针所指的内存中
-  len = ::read(client->fd, sev->getRequestBuf(),
-               sizeof(sev->getRequestBufLen()));
+  len =
+      ::read(client->fd, sev->getRequestBuf(), sizeof(sev->getRequestBufLen()));
   if (len == 0) {
     /* 客户端断开连接，在这里移除读事件并且释放客户数据结构 */
     LOG_INFO("Disconnected\n");
@@ -138,6 +175,10 @@ void SessionStage::readSocket(StageEvent *event) {
     return;
   }
 
+  readStat.end();
+
+
+  TimerStat sqlStat(*sqlMetric);
   std::string sql = sev->getRequestBuf();
   SQLEvent *sqlEvent = new SQLEvent(sev, sql);
   if (sqlEvent == NULL) {

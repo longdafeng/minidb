@@ -16,6 +16,7 @@
 
 #include "common/seda/stage.h"
 #include "net/connection_context.h"
+#include "common/metrics/metrics.h"
 
 class SessionStage : public common::Stage {
 public:
@@ -41,6 +42,13 @@ protected:
 
 private:
   Stage *resolveStage;
+  common::SimpleTimer *readSocketMetric;
+  static const std::string READ_SOCKET_METRIC_TAG;
+  common::SimpleTimer *writeSocketMetric;
+  static const std::string WRITE_SOCKET_METRIC_TAG;
+  common::SimpleTimer *sqlMetric;
+  static const std::string SQL_METRIC_TAG;
+
 };
 
 #endif //__OBSERVER_SESSION_SESSIONSTAGE_H__

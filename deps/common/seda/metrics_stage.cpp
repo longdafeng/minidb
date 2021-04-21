@@ -123,6 +123,13 @@ void MetricsStage::handleEvent(StageEvent *event) {
 void MetricsStage::callbackEvent(StageEvent *event, CallbackContext *context) {
   LOG_TRACE("Enter\n");
 
+  MetricsRegistry &metricsRegistry = theGlobalMetricsRegistry();
+
+  metricsRegistry.snapshot();
+  metricsRegistry.report();
+
+  // do it again.
+  addEvent(event);
 
   LOG_TRACE("Exit\n");
   return;

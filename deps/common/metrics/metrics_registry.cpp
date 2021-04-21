@@ -18,6 +18,12 @@
 
 namespace common {
 
+MetricsRegistry& theGlobalMetricsRegistry() {
+  static MetricsRegistry instance;
+
+  return instance;
+}
+
 void MetricsRegistry::registerMetric(const std::string &tag, Metric *metric) {
   std::map<std::string, Metric*>::iterator it = metrics.find(tag);
   if (it != metrics.end()) {
