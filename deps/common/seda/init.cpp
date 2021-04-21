@@ -29,8 +29,8 @@
 #include "common/seda/init.h"
 #include "common/seda/kill_thread.h"
 #include "common/seda/seda_config.h"
-#include "common/seda/seda_stats_stage.h"
 #include "common/seda/stage_factory.h"
+#include "common/seda/metrics_stage.h"
 #include "common/seda/thread_pool.h"
 #include "common/seda/timer_stage.h"
 namespace common {
@@ -44,8 +44,8 @@ int initSeda(ProcessParam *pProcessCfg) {
   static StageFactory killThreadFactory("KillThreads",
                                         &KillThreadStage::makeStage);
   static StageFactory timerFactory("TimerStage", &TimerStage::makeStage);
-  static StageFactory sedaStatsFactory("SedaStatsStage",
-                                       &SedaStatsStage::makeStage);
+  static StageFactory sedaStatsFactory("MetricsStage",
+                                       &MetricsStage::makeStage);
 
   // try to parse the seda configuration files
   SedaConfig *config = SedaConfig::getInstance();

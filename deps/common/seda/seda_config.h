@@ -21,21 +21,12 @@
 #include <vector>
 
 #include "common/seda/thread_pool.h"
+#include "common/seda/seda_defs.h"
+
 namespace common {
 
 //keywords of sedaconfig
-#define SEDA_BASE_NAME  "SEDA_BASE"
-#define THREAD_POOLS_NAME "ThreadPools"
-#define STAGES "STAGES"
 
-#define EVENT_HISTORY "EventHistory"
-#define MAX_EVENT_HISTORY_NUM "MaxEventHistoryNum"
-
-#define COUNT "count"
-
-#define THREAD_POOL_ID "ThreadId"
-
-#define NEXT_STAGES "NextStages"
 
 //! A class to configure seda stages
 /**
@@ -195,6 +186,9 @@ class SedaConfig {
   status_t instantiate();
 
   status_t initThreadPool();
+
+  std::string getThreadPool(std::string &stageName);
+
   status_t initStages();
   status_t genNextStages();
 
@@ -210,8 +204,6 @@ class SedaConfig {
    * Setting theMaxEventHops, theEventHistoryFlag
    */
   void initEventHistory();
-
-  status_t initThreadpool();
 
   SedaConfig &operator=(const SedaConfig &cevtout);
 };

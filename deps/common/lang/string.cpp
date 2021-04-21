@@ -121,6 +121,32 @@ void splitString(char *str, char dim, std::vector<char *> &results,
   return;
 }
 
+void mergeString(std::string &str, std::string delim,
+                 std::vector<std::string> &source, size_t resultLen ){
+
+  std::ostringstream ss;
+  if (source.empty() ) {
+    str = ss.str();
+    return ;
+  }
+
+  if (resultLen == 0 || resultLen > source.size()) {
+    resultLen = source.size();
+  }
+
+  for (int i = 0; i < resultLen; i++) {
+    if (i == 0) {
+      ss << source[i];
+    }else {
+      ss << delim << source[i];
+    }
+
+  }
+
+  str = ss.str();
+  return ;
+}
+
 void replace(std::string &str, const std::string &old,
              const std::string &newStr) {
   if (old.compare(newStr) == 0) {

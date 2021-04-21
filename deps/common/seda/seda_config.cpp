@@ -250,6 +250,12 @@ SedaConfig::status_t SedaConfig::initThreadPool() {
       }
     }
 
+    if  (mThreadPools.find(DEFAULT_THREAD_POOL) == mThreadPools.end()) {
+      LOG_ERROR("There is no default thread pool %s, please add it.",
+                DEFAULT_THREAD_POOL);
+      return INITFAIL;
+    }
+
   } catch (std::exception &e) {
     LOG_ERROR("Failed to init mThreadPools:%s\n", e.what());
     clearConfig();
@@ -264,6 +270,35 @@ SedaConfig::status_t SedaConfig::initThreadPool() {
   }
 
   return SUCCESS;
+}
+
+std::string SedaConfig::getThreadPool(std::string &stageName) {
+  std::string ret = DEFAULT_THREAD_POOL;
+  // Get thread pool
+  std::map<std::string, std::string> stageSection =
+      theGlobalProperties()->get(stageName);
+  std::map<std::string, std::string>::iterator itt;
+  std::string threadPoolId = THREAD_POOL_ID;
+  itt = stageSection.find(threadPoolId);
+  if (itt == stageSection.end()) {
+    LOG_INFO("Not set threadPoolId for %s, use default threadpool %s",
+             stageName.c_str(), DEFAULT_THREAD_POOL);
+    return ret;
+  }
+
+  std::string threadName = itt->second;
+  if (threadName.empty()) {
+    LOG_ERROR("Failed to set %s of the %s, use the default threadpool %s",
+              threadPoolId.c_str(), stageName.c_str(), DEFAULT_THREAD_POOL);
+    return ret;
+  }
+
+  if (mThreadPools.find(threadName) == mThreadPools.end()) {
+    LOG_ERROR("The stage %s's threadpool %s is invalid, use the default "
+              "threadpool %s",
+              stageName.c_str(), threadName.c_str(), DEFAULT_THREAD_POOL);
+  }
+  return ret;
 }
 
 SedaConfig::status_t SedaConfig::initStages() {
@@ -290,29 +325,7 @@ SedaConfig::status_t SedaConfig::initStages() {
          it != mStageNames.end(); it++) {
       std::string stageName(*it);
 
-      // Get thread pool
-      std::map<std::string, std::string> stageSection =
-        theGlobalProperties()->get(stageName);
-      std::map<std::string, std::string>::iterator itt;
-      std::string threadPoolId = THREAD_POOL_ID;
-      itt = stageSection.find(threadPoolId);
-      if (itt == stageSection.end()) {
-        LOG_ERROR("Not set threadPoolId for %s", stageName.c_str());
-        clearConfig();
-        return INITFAIL;
-      }
-
-      std::string threadName = itt->second;
-      if (threadName.empty()) {
-        LOG_ERROR("Failed to set %s of the %s", threadPoolId.c_str(),
-                  stageName.c_str());
-        clearConfig();
-        return INITFAIL;
-      }
-
-      if (mThreadPools.find(threadName) == mThreadPools.end()) {
-        LOG_ERROR("There is not threadpool whose name is %s, the stage %s's thread");
-      }
+      std::string threadName = getThreadPool(stageName);
       Threadpool *t = mThreadPools[threadName];
 
       Stage *stage = StageFactory::makeInstance(stageName);

@@ -184,8 +184,6 @@ class TimerRegisterEvent : public TimerEvent {
 };
 
 /**
- *  \author Longda
- *  \date October 22, 2007
  *
  *  \brief An event requesting to cancel a timer callback that was
  *  previously registered with the \c TimerStage.
@@ -245,8 +243,6 @@ class TimerCancelEvent : public TimerEvent {
 };
 
 /**
- *  \author Longda
- *  \date October 22, 2007
  *
  *  \brief A stage that triggers event callbacks at some future time.
  *

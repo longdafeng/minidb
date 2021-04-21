@@ -71,6 +71,8 @@ void splitString(const std::string &str, std::string delim,
 void splitString(char *str, char dim, std::vector<char *> &results,
                  bool keep_null = false);
 
+void mergeString(std::string &str, std::string delim,
+                 std::vector<std::string> &result, size_t resultLen = 0);
 /**
  * replace old with new in the string
  */
