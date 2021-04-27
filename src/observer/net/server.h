@@ -16,6 +16,7 @@
 
 #include "common/defs.h"
 
+#include "common/metrics/metrics.h"
 #include "common/seda/stage.h"
 #include "net/connection_context.h"
 #include "net/server_param.h"
@@ -28,16 +29,15 @@ public:
   int serve();
   void shutdown();
 
-private:
+  static void accept(int fd, short ev, void *arg);
   // close connection
   static void closeConnection(ConnectionContext *clientContext);
 
+  static void recv(int fd, short ev, void *arg);
+  static int send(ConnectionContext *client, char *buf, int dataLen);
+
+private:
   int setNonblock(int fd);
-
-  //
-  static void read(int fd, short ev, void *arg);
-
-  static void accept(int fd, short ev, void *arg);
 
   int start();
 
@@ -51,6 +51,10 @@ private:
   ServerParam serverParam;
 
   static common::Stage *sessionStage;
+  static common::SimpleTimer *readSocketMetric;
+  static const std::string READ_SOCKET_METRIC_TAG;
+  static common::SimpleTimer *writeSocketMetric;
+  static const std::string WRITE_SOCKET_METRIC_TAG;
 };
 
 #endif //__OBSERVER_NET_SERVER_H__

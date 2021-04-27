@@ -15,7 +15,6 @@
 #define __OBSERVER_SESSION_SESSIONEVENT_H__
 
 #include "common/seda/stage_event.h"
-#include "ini_setting.h"
 #include "net/connection_context.h"
 
 using namespace common;
@@ -37,7 +36,6 @@ public:
 private:
   ConnectionContext *client;
 
-  char requestBuf[SOCKET_BUFFER_SIZE];
   char *response;
   int responseLen;
 };

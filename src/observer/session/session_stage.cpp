@@ -20,19 +20,18 @@
 #include "common/log/log.h"
 #include "common/seda/timer_stage.h"
 
+#include "common/lang/mutex.h"
 #include "common/metrics/metrics_registry.h"
 #include "common/seda/callback.h"
 #include "event/session_event.h"
 #include "event/sql_event.h"
+#include "net/server.h"
 
-const std::string SessionStage::READ_SOCKET_METRIC_TAG = "SessionStage.readsocket";
-const std::string SessionStage::WRITE_SOCKET_METRIC_TAG = "SessionStage.writesocket";
 const std::string SessionStage::SQL_METRIC_TAG = "SessionStage.sql";
 
 //! Constructor
 SessionStage::SessionStage(const char *tag)
-    : Stage(tag), resolveStage(NULL), readSocketMetric(NULL),
-      writeSocketMetric(NULL), sqlMetric(NULL) {}
+    : Stage(tag), resolveStage(NULL), sqlMetric(NULL) {}
 
 //! Destructor
 SessionStage::~SessionStage() {}
@@ -68,13 +67,7 @@ bool SessionStage::initialize() {
   std::list<Stage *>::iterator stgp = nextStageList.begin();
   resolveStage = *(stgp++);
 
-  MetricsRegistry metricsRegistry = theGlobalMetricsRegistry();
-  readSocketMetric = new SimpleTimer();
-  metricsRegistry.registerMetric(READ_SOCKET_METRIC_TAG, readSocketMetric);
-
-  writeSocketMetric = new SimpleTimer();
-  metricsRegistry.registerMetric(WRITE_SOCKET_METRIC_TAG, writeSocketMetric);
-
+  MetricsRegistry &metricsRegistry = theGlobalMetricsRegistry();
   sqlMetric = new SimpleTimer();
   metricsRegistry.registerMetric(SQL_METRIC_TAG, sqlMetric);
   LOG_TRACE("Exit");
@@ -86,19 +79,6 @@ void SessionStage::cleanup() {
   LOG_TRACE("Enter");
 
   MetricsRegistry &metricsRegistry = theGlobalMetricsRegistry();
-  if (readSocketMetric != NULL) {
-    metricsRegistry.unregister(READ_SOCKET_METRIC_TAG);
-    // it should wait some time
-    delete readSocketMetric;
-    readSocketMetric = NULL;
-  }
-
-  if (writeSocketMetric != NULL) {
-    metricsRegistry.unregister(WRITE_SOCKET_METRIC_TAG);
-    delete writeSocketMetric;
-    writeSocketMetric = NULL;
-  }
-
   if (sqlMetric != NULL) {
     metricsRegistry.unregister(SQL_METRIC_TAG);
     delete sqlMetric;
@@ -112,7 +92,7 @@ void SessionStage::handleEvent(StageEvent *event) {
   LOG_TRACE("Enter\n");
 
   // right now, we just support only one event.
-  readSocket(event);
+  handleRequest(event);
 
   LOG_TRACE("Exit\n");
   return;
@@ -120,88 +100,36 @@ void SessionStage::handleEvent(StageEvent *event) {
 
 void SessionStage::callbackEvent(StageEvent *event, CallbackContext *context) {
   LOG_TRACE("Enter\n");
-  TimerStat writeStat(*writeSocketMetric);
-  SessionEvent *sev = dynamic_cast<SessionEvent *>(event);
-  ConnectionContext *client = sev->getClient();
 
-  int dataLen = sev->getResponseLen();
-  int wlen = 0;
-  for (int i = 0; i < 3 && wlen < dataLen; i++) {
-    int len = write(client->fd, sev->getResponse(), sev->getResponseLen());
-    if (len < 0) {
-      LOG_ERROR("Failed to send data back to client\n");
-      sev->done();
-      return;
-    }
-    wlen += len;
-  }
-  if (wlen < dataLen) {
-    LOG_WARN("Not all data has been send back to client");
-  }
+  SessionEvent *sev = dynamic_cast<SessionEvent *>(event);
+
+
+  Server::send(sev->getClient(), sev->getResponse(), sev->getResponseLen());
+  //Server::send(sev->getClient(), sev->getRequestBuf(), strlen(sev->getRequestBuf()));
 
   sev->done();
   LOG_TRACE("Exit\n");
   return;
 }
 
-void SessionStage::closeConnection(ConnectionContext *clientContext) {
-  event_del(&clientContext->readEvent);
-  ::close(clientContext->fd);
-  free(clientContext);
-}
-
-void SessionStage::readSocket(StageEvent *event) {
-  TimerStat readStat(*readSocketMetric);
+void SessionStage::handleRequest(StageEvent *event) {
 
   SessionEvent *sev = dynamic_cast<SessionEvent *>(event);
-  ConnectionContext *client = sev->getClient();
-  int len;
-
-  //会把参数fd 所指的文件传送count个字节到buf指针所指的内存中
-  len =
-      ::read(client->fd, sev->getRequestBuf(), sizeof(sev->getRequestBufLen()));
-  if (len == 0) {
-    /* 客户端断开连接，在这里移除读事件并且释放客户数据结构 */
-    LOG_INFO("Disconnected\n");
-    closeConnection(client);
-    sev->done();
-    return;
-  } else if (len < 0) {
-    /* 出现了其它的错误，在这里关闭socket，移除事件并且释放客户数据结构 */
-    LOG_ERROR("Failed to read socket of %s, %s\n", client->ipAddr,
-              strerror(errno));
-    closeConnection(client);
-    sev->done();
-    return;
-  }
-
-  readStat.end();
-
 
   TimerStat sqlStat(*sqlMetric);
   std::string sql = sev->getRequestBuf();
-  SQLEvent *sqlEvent = new SQLEvent(sev, sql);
-  if (sqlEvent == NULL) {
-    LOG_ERROR("Failed to new SQLEvent");
-    closeConnection(client);
-    sev->done();
-    return;
-  }
 
   CompletionCallback *cb = new CompletionCallback(this, NULL);
   if (cb == NULL) {
     LOG_ERROR("Failed to new callback for SessionEvent");
 
-    delete sqlEvent;
     sev->done();
-
-    closeConnection(client);
     return;
   }
 
   sev->pushCallback(cb);
 
-  resolveStage->handleEvent(sqlEvent);
+  resolveStage->handleEvent(sev);
 
   // TODO it will write data directly
 }

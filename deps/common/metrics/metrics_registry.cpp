@@ -31,7 +31,8 @@ void MetricsRegistry::registerMetric(const std::string &tag, Metric *metric) {
     return;
   }
 
-  metrics[tag] = metric;
+  //metrics[tag] = metric;
+  metrics.insert(std::pair<std::string, Metric *>(tag, metric));
   LOG_INFO("Successfully register metric :%s", tag.c_str());
 }
 

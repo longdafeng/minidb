@@ -21,6 +21,7 @@
 #include "common/lang/string.h"
 #include "common/log/log.h"
 #include "common/seda/timer_stage.h"
+#include "common/metrics/metrics_registry.h"
 
 using namespace common;
 
@@ -71,6 +72,7 @@ void MemStorageStage::cleanup() {
 
 void MemStorageStage::handleEvent(StageEvent *event) {
   LOG_TRACE("Enter\n");
+  TimerStat timerStat(*queryMetric);
 
   event->doneImmediate();
 

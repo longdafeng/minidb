@@ -14,6 +14,7 @@
 #include <arpa/inet.h>
 #include <errno.h>
 
+#include <common/metrics/metrics_registry.h>
 #include <fcntl.h>
 #include <netinet/in.h>
 #include <netinet/tcp.h>
@@ -26,13 +27,18 @@
 
 #include "net/server.h"
 
+#include "common/lang/mutex.h"
 #include "common/log/log.h"
 #include "common/seda/seda_config.h"
 #include "event/session_event.h"
 #include "ini_setting.h"
 
 using namespace common;
-Stage * Server::sessionStage = NULL;
+Stage *Server::sessionStage = NULL;
+const std::string Server::READ_SOCKET_METRIC_TAG = "SessionStage.readsocket";
+const std::string Server::WRITE_SOCKET_METRIC_TAG = "SessionStage.writesocket";
+common::SimpleTimer *Server::readSocketMetric = NULL;
+common::SimpleTimer *Server::writeSocketMetric = NULL;
 
 ServerParam::ServerParam() {
   listenAddr = INADDR_ANY;
@@ -52,6 +58,19 @@ Server::Server(ServerParam inputServerParam) : serverParam(inputServerParam) {
   baseEvent = NULL;
   listenEv = NULL;
   sessionStage = theSedaConfig()->getStage(SESSION_STAGE_NAME);
+
+  MetricsRegistry &metricsRegistry = theGlobalMetricsRegistry();
+  if (Server::readSocketMetric == NULL) {
+    Server::readSocketMetric = new SimpleTimer();
+    metricsRegistry.registerMetric(Server::READ_SOCKET_METRIC_TAG,
+                                   Server::readSocketMetric);
+  }
+
+  if (Server::writeSocketMetric == NULL) {
+    Server::writeSocketMetric = new SimpleTimer();
+    metricsRegistry.registerMetric(Server::WRITE_SOCKET_METRIC_TAG,
+                                   Server::writeSocketMetric);
+  }
 }
 
 Server::~Server() {
@@ -76,10 +95,62 @@ int Server::setNonblock(int fd) {
   return 0;
 }
 
-void Server::read(int fd, short ev, void *arg) {
-  SessionEvent *sev = new SessionEvent((ConnectionContext *)arg);
+void Server::closeConnection(ConnectionContext *clientContext) {
+  LOG_INFO("Close connection of %s.", clientContext->addr);
+  event_del(&clientContext->readEvent);
+  ::close(clientContext->fd);
+  delete clientContext;
+}
 
+void Server::recv(int fd, short ev, void *arg) {
+  ConnectionContext *client = (ConnectionContext *)arg;
+
+  TimerStat readStat(*readSocketMetric);
+  MUTEX_LOCK(&client->mutex);
+  int len = ::read(client->fd, client->buf, sizeof(client->buf));
+  MUTEX_UNLOCK(&client->mutex);
+  readStat.end();
+  if (len == 0) {
+    LOG_INFO("There is no data to read %s\n", client->addr);
+
+  } else if (len < 0) {
+    LOG_ERROR("Failed to read socket of %s, %s\n", client->addr,
+              strerror(errno));
+    closeConnection(client);
+    return;
+  }
+
+  SessionEvent *sev = new SessionEvent(client);
   sessionStage->addEvent(sev);
+}
+
+int Server::send(ConnectionContext *client, char *buf, int dataLen) {
+  if (buf == NULL || dataLen == 0) {
+    return 0;
+  }
+
+  TimerStat writeStat(*writeSocketMetric);
+
+  MUTEX_LOCK(&client->mutex);
+
+  int wlen = 0;
+  for (int i = 0; i < 3 && wlen < dataLen; i++) {
+    int len = write(client->fd, buf, dataLen - wlen);
+    if (len < 0) {
+      LOG_ERROR("Failed to send data back to client\n");
+      MUTEX_UNLOCK(&client->mutex);
+
+      closeConnection(client);
+      return -STATUS_FAILED_NETWORK;
+    }
+    wlen += len;
+  }
+  if (wlen < dataLen) {
+    LOG_WARN("Not all data has been send back to client");
+  }
+
+  MUTEX_UNLOCK(&client->mutex);
+  return 0;
 }
 
 void Server::accept(int fd, short ev, void *arg) {
@@ -101,10 +172,13 @@ void Server::accept(int fd, short ev, void *arg) {
     ::close(clientFd);
     return;
   }
+  std::stringstream addross;
+  addross << ipAddr << ":" << addr.sin_port;
+  std::string addrStr = addross.str();
 
   ret = instance->setNonblock(clientFd);
   if (ret < 0) {
-    LOG_ERROR("Failed to set socket of %s as non blocking, %s", ipAddr,
+    LOG_ERROR("Failed to set socket of %s as non blocking, %s", addrStr.c_str(),
               strerror(errno));
     ::close(clientFd);
     return;
@@ -113,8 +187,8 @@ void Server::accept(int fd, short ev, void *arg) {
   int yes = 1;
   ret = setsockopt(clientFd, IPPROTO_TCP, TCP_NODELAY, &yes, sizeof(yes));
   if (ret < 0) {
-    LOG_ERROR("Failed to set socket of %s option as : TCP_NODELAY %s\n", ipAddr,
-              strerror(errno));
+    LOG_ERROR("Failed to set socket of %s option as : TCP_NODELAY %s\n",
+              addrStr.c_str(), strerror(errno));
     ::close(clientFd);
     return;
   }
@@ -122,16 +196,17 @@ void Server::accept(int fd, short ev, void *arg) {
   ConnectionContext *clientContext = new ConnectionContext();
   memset(clientContext, 0, sizeof(ConnectionContext));
   clientContext->fd = clientFd;
-  strncpy(clientContext->ipAddr, ipAddr, sizeof(ipAddr) - 1);
+  strncpy(clientContext->addr, addrStr.c_str(), sizeof(clientContext->addr));
+  pthread_mutex_init(&clientContext->mutex, NULL);
 
   event_set(&clientContext->readEvent, clientContext->fd, EV_READ | EV_PERSIST,
-            read, clientContext);
+            recv, clientContext);
 
   ret = event_base_set(instance->baseEvent, &clientContext->readEvent);
   if (ret < 0) {
     LOG_ERROR(
         "Failed to do event_base_set for read event of %s into libevent, %s",
-        clientContext->ipAddr, strerror(errno));
+        clientContext->addr, strerror(errno));
     free(clientContext);
     ::close(instance->serverSocket);
     return;
@@ -140,13 +215,13 @@ void Server::accept(int fd, short ev, void *arg) {
   ret = event_add(&clientContext->readEvent, NULL);
   if (ret < 0) {
     LOG_ERROR("Failed to event_add for read event of %s into libevent, %s",
-              clientContext->ipAddr, strerror(errno));
+              clientContext->addr, strerror(errno));
     free(clientContext);
     ::close(instance->serverSocket);
     return;
   }
 
-  LOG_INFO("Accepted connection from %s\n", clientContext->ipAddr);
+  LOG_INFO("Accepted connection from %s\n", clientContext->addr);
 
   return;
 }
@@ -176,6 +251,7 @@ int Server::start() {
     ::close(serverSocket);
     return -1;
   }
+
 
   memset(&sa, 0, sizeof(sa));
   sa.sin_family = AF_INET;

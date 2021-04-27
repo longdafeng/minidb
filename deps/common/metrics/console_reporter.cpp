@@ -11,29 +11,27 @@
 // Created by Longda on 2021/4/20.
 //
 
-#include <string>
-#include <iostream>
-#include "common/metrics/metric.h"
 #include "common/metrics/console_reporter.h"
-
-
+#include "common/metrics/metric.h"
+#include <iostream>
+#include <string>
 
 namespace common {
 
-ConsoleReporter* theGlobalConsoleReporter() {
-  static ConsoleReporter* instance = new ConsoleReporter();
+ConsoleReporter *theGlobalConsoleReporter() {
+  static ConsoleReporter *instance = new ConsoleReporter();
 
   return instance;
 }
 
- void ConsoleReporter::report(const std::string &tag, Metric *metric) {
+void ConsoleReporter::report(const std::string &tag, Metric *metric) {
   Snapshot *snapshot = metric->getSnapshot();
 
   if (snapshot != NULL) {
     printf("%s:%s\n", tag.c_str(), snapshot->toString().c_str());
-  }else {
+  } else {
     printf("There is no snapshot of %s metrics.", tag.c_str());
   }
 }
 
-}// namespace common
+} // namespace common

@@ -241,7 +241,6 @@ void *Threadpool::runThread(void *poolPtr) {
   LOG_INFO("threadid = %llx, threadname = %s\n", threadid,
            poolP->getName().c_str());
 
-  LOG_TRACE("enter %p", poolPtr);
   // enter a loop where we continuously look for events from Stages on
   // the runQueue and handle the event.
   while (1) {
@@ -292,7 +291,7 @@ void *Threadpool::runThread(void *poolPtr) {
     runStage->releaseEvent();
   }
   LOG_TRACE("exit %p", poolPtr);
-  LOG_INFO("threadid = %d, threadname = %s", threadid,
+  LOG_INFO("Begin to exit, threadid = %llx, threadname = %s", threadid,
            poolP->getName().c_str());
 
   // the dummy compiler need this

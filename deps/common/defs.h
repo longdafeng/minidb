@@ -50,6 +50,7 @@ enum {
   STATUS_INIT_LOG,      //!< log error
   STATUS_INIT_THREAD,   //!< failed to init thread
   STATUS_FAILED_JOB,    //!< Failed to do job
+  STATUS_FAILED_NETWORK, //!< Network failure
 
   STATUS_UNKNOW_ERROR,
   STATUS_LAST_ERR //!< last error code

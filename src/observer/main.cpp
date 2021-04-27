@@ -233,11 +233,11 @@ int init(ProcessParam *processParam) {
   metricsRegistry.addReporter(logReporter);
 
   // Block interrupt signals before creating child threads.
-  sigset_t newSigset, oset;
-  blockDefaultSignals(&newSigset, &oset);
   setSignalHandler(sigHandler);
+  //sigset_t newSigset, oset;
+  //blockDefaultSignals(&newSigset, &oset);
   // wait interrupt signals
-  startWaitForSignals(&newSigset);
+  //startWaitForSignals(&newSigset);
 
   seedRandom();
 

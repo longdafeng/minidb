@@ -21,8 +21,11 @@
 #include "common/lang/string.h"
 #include "common/log/log.h"
 #include "common/seda/timer_stage.h"
+#include "common/metrics/metrics_registry.h"
 
 using namespace common;
+
+const std::string DefaultStorageStage::QUERY_METRIC_TAG = "DefaultStorageStage.query";
 
 //! Constructor
 DefaultStorageStage::DefaultStorageStage(const char *tag) : Stage(tag) {}
@@ -58,6 +61,10 @@ bool DefaultStorageStage::setProperties() {
 bool DefaultStorageStage::initialize() {
   LOG_TRACE("Enter");
 
+  MetricsRegistry &metricsRegistry = theGlobalMetricsRegistry();
+  queryMetric =  new SimpleTimer();
+  metricsRegistry.registerMetric(QUERY_METRIC_TAG, queryMetric);
+
   LOG_TRACE("Exit");
   return true;
 }
@@ -71,6 +78,7 @@ void DefaultStorageStage::cleanup() {
 
 void DefaultStorageStage::handleEvent(StageEvent *event) {
   LOG_TRACE("Enter\n");
+  TimerStat timerStat(*queryMetric);
 
   event->doneImmediate();
 

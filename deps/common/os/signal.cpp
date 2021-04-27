@@ -64,11 +64,8 @@ void *waitForSignals(void *args) {
   while (true) {
     errno = 0;
     int ret = sigwait(signal_set, &sig_number);
-    LOG_INFO("sigwait return value: %d \n", ret);
-    if (ret == 0) {
-      LOG_INFO("signal caught: %d\n", sig_number);
-      break;
-    } else {
+    LOG_INFO("sigwait return value: %d, %d \n", ret, sig_number);
+    if (ret != 0)  {
       char errstr[256];
       strerror_r(errno, errstr, sizeof(errstr));
       LOG_ERROR("error (%d) %s\n", errno, errstr);

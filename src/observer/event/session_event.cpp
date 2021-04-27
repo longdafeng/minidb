@@ -15,7 +15,6 @@
 SessionEvent::SessionEvent(ConnectionContext *client) : client(client) {
   response = NULL;
   responseLen = 0;
-  memset(requestBuf, 0, sizeof(requestBuf));
 }
 
 SessionEvent::~SessionEvent() {
@@ -41,6 +40,6 @@ void SessionEvent::setResponseLen(int response_len) {
   responseLen = response_len;
 }
 
-char *SessionEvent::getRequestBuf() { return requestBuf; }
+char *SessionEvent::getRequestBuf() { return client->buf; }
 
 int SessionEvent::getRequestBufLen() { return SOCKET_BUFFER_SIZE; }

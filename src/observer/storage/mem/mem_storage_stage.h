@@ -15,6 +15,7 @@
 #define __OBSERVER_STORAGE_MEM_STORAGE_STAGE_H__
 
 #include "common/seda/stage.h"
+#include "common/metrics/metrics.h"
 
 class MemStorageStage : public common::Stage {
 public:
@@ -33,6 +34,8 @@ protected:
                      common::CallbackContext *context);
 
 protected:
+  common::SimpleTimer *queryMetric;
+  static const std::string QUERY_METRIC_TAG;
 private:
 };
 

@@ -42,7 +42,7 @@ void Meter::snapshot() {
   long nowTick = now.tv_sec * 1000000 + now.tv_usec;
 
   double tempValue =
-      (double)value.exchange(0l) / ((snapshotTick - nowTick) / 1000000);
+      ((double)value.exchange(0l)) / ((nowTick - snapshotTick ) / 1000000);
   snapshotTick = nowTick;
 
   if (snapshotValue == NULL) {
@@ -60,7 +60,7 @@ SimpleTimer::~SimpleTimer() {
 
 void SimpleTimer::inc(long increase) {
   value.fetch_add(increase);
-  times++;
+  times.fetch_add(1);
 }
 
 void SimpleTimer::update(long one) { inc(one); }
@@ -80,8 +80,8 @@ void SimpleTimer::snapshot() {
   double mean = 0;
 
   if (timesSnapshot > 0) {
-    tps = (double)valueSnapshot / ((snapshotTick - nowTick) / 1000000);
-    mean = (double)valueSnapshot / timesSnapshot;
+    tps = ((double)timesSnapshot )/ ((nowTick - snapshotTick) / 1000000);
+    mean = ((double)valueSnapshot) / timesSnapshot;
   }
 
   snapshotTick = nowTick;
@@ -147,7 +147,7 @@ void Timer::snapshot() {
   long nowTick = now.tv_sec * 1000000 + now.tv_usec;
 
   double tps =
-      (double)value.exchange(0l) / ((snapshotTick - nowTick) / 1000000);
+      ((double)value.exchange(0l) )/ ((nowTick - snapshotTick  ) / 1000000);
   snapshotTick = nowTick;
 
   MUTEX_LOCK(&mutex);

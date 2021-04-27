@@ -37,15 +37,14 @@ protected:
 protected:
   void handleInput(common::StageEvent *event);
 
-  void closeConnection(ConnectionContext *clientContext);
-  void readSocket(common::StageEvent *event);
+
+  void handleRequest(common::StageEvent *event);
 
 private:
   Stage *resolveStage;
-  common::SimpleTimer *readSocketMetric;
-  static const std::string READ_SOCKET_METRIC_TAG;
-  common::SimpleTimer *writeSocketMetric;
-  static const std::string WRITE_SOCKET_METRIC_TAG;
+
+
+
   common::SimpleTimer *sqlMetric;
   static const std::string SQL_METRIC_TAG;
 

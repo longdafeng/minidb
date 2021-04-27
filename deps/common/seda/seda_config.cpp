@@ -337,6 +337,8 @@ SedaConfig::status_t SedaConfig::initStages() {
       mStages[stageName] = stage;
       stage->setPool(t);
 
+      LOG_INFO("Stage %s use threadpool %s.",
+               stageName.c_str(), threadName.c_str());
     } // end for stage
 
   } catch (std::exception &e) {

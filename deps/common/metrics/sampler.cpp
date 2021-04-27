@@ -29,7 +29,7 @@ Sampler::Sampler():random() {}
 Sampler::~Sampler() {}
 
 bool Sampler::sampling() {
-  int v = random.next(100);
+  int v = random.next(RANGE_SIZE);
   if (v <= ratioNum) {
     return true;
   } else {

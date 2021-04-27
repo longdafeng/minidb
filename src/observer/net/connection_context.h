@@ -15,11 +15,14 @@
 #define __SRC_OBSERVER_NET_CONNECTION_CONTEXT_H__
 
 #include <event.h>
+#include <ini_setting.h>
 
 typedef struct _ConnectionContext {
   int fd;
-  char ipAddr[24];
+  char addr[24];
+  char buf[SOCKET_BUFFER_SIZE];
   struct event readEvent;
+  pthread_mutex_t mutex;
 } ConnectionContext;
 
 #endif //__SRC_OBSERVER_NET_CONNECTION_CONTEXT_H__
