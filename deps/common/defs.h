@@ -43,13 +43,13 @@ inline const std::string &theSwVersion() {
 
 enum {
   // General Error Codes
-  STATUS_SUCCESS = 0,   //!< Success status should be zero,
-  STATUS_INVALID_PARAM, //!< Invalid parameter
-  STATUS_FAILED_INIT,   //!< Failed to init program
-  STATUS_PROPERTY_ERR,  //!< Property error
-  STATUS_INIT_LOG,      //!< log error
-  STATUS_INIT_THREAD,   //!< failed to init thread
-  STATUS_FAILED_JOB,    //!< Failed to do job
+  STATUS_SUCCESS = 0,    //!< Success status should be zero,
+  STATUS_INVALID_PARAM,  //!< Invalid parameter
+  STATUS_FAILED_INIT,    //!< Failed to init program
+  STATUS_PROPERTY_ERR,   //!< Property error
+  STATUS_INIT_LOG,       //!< log error
+  STATUS_INIT_THREAD,    //!< failed to init thread
+  STATUS_FAILED_JOB,     //!< Failed to do job
   STATUS_FAILED_NETWORK, //!< Network failure
 
   STATUS_UNKNOW_ERROR,
@@ -79,8 +79,7 @@ typedef short s16_t;
 typedef int s32_t;
 typedef long long s64_t;
 
-
 #define LOCAL_HOST "localhost"
 
-} //namespace common
+} // namespace common
 #endif //__COMMON_DEFS_H__
