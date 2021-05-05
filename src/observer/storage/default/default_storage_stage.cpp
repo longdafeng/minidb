@@ -14,7 +14,7 @@
 #include <string.h>
 #include <string>
 
-#include "default_storage_stage.h"
+#include "storage/default/default_storage_stage.h"
 
 #include "common/conf/ini.h"
 #include "common/io/io.h"
